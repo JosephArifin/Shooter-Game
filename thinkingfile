@@ -1,0 +1,145 @@
+pass all the stats of the bullet to enemy when bullet hits enemy and do according to bullet stats
+
+bullet stats: bullet spd, bullet penetration, bullet reload time, bullet dmg
+
+if collision between bullet and enemy:
+    only stats that matter are penetration and dmg
+    ?how to pass stats to enemy?
+        have func in main deal with stats of bullet that get passed to enemy
+    ?how to make penetration work?
+    when penetration = 0, self.kill bullet
+    when penetration = 1, one more enemy can be hit and so on
+        if collision:
+            if bullet penetration != 0:
+            
+                call the decrease enemy health func
+                decrease bullet penetration IN THE INSTANCE OF THE BULLET -= 1
+            else:
+                call decrease enemy health func
+                kill bullet
+
+    
+
+SHOP: one giant class containing all the stats. mabye instead of a class, have a bunch of funcs in main
+
+main logic: when click button, increase the stats of character.
+
+create button, check if mouse clicks it, then increase stats of character
+
+make rects, ?how to create rects? make class that creates funcs that draws rects on the shop sprite.
+
+?how to check for mouse pos over rect?
+if mouse pos is inside rect?how od we check if inside rect?
+
+
+ONe class: for the buttons, make a bunch of rects, if click 
+        WE DID IT
+
+increase stat bar when button clicked
+
+max = 5
+
+self.height / max
+
+update bar:
+    if button clicked, add 1 to value:
+        value = 1
+    
+
+        
+
+value / max = 1/5
+
+
+shop: 
+
+    if rects collide:
+        if shop is open, stop opening shop:
+
+
+stop enemies from going on top of each other
+?how?
+check if they are colliding. check what side they are colliding. 
+            if horizontal collision: set enemy.direction.x = 0
+            if vertical collision: set enemy.direction.y = 0
+                this will make both enemies stop moving. we only want the "front" enemy to keep moving. "back" enemy stops x or y.
+            if horizontal collision and "back enemy": set enemy.direction.x = 0
+            if vertical collision and "back enemy": set enemy.direction.y = 0
+                ?how to check if enemy is back?
+                    first check which direction both enemies are going.
+                        if enemy direction is right and collision on right side of rect, then this enemy is back.
+                            ?what happens when multiple enemies are colliding with each other 3 - 4?
+what if we just think that the enemies are dumb and when they collide with each other, they stop for like a sec.
+!they will be stopped forever!
+    make them also take a step back lol.
+    this is a lot simplier.
+            nvm chatgpt did it IT LOOKS SO GOOD TO0 LOL
+
+
+Find the enemy spawn locations in a certain big radius of the player.
+    We can also calculate the distance between the enemy loc and the player
+    !This may be performance heavy!
+
+    Make a invisible rect around player (it doesn;t have to be a circle) then check if enemy loc collide with rect.
+
+    when spawn enemy is called, check.
+    if spawn_rect.collidepoint(obj.x, obj.y):
+        ?how does multiple objs work?
+        it seems to take ALLLLLLL objs. IT WORKS 
+
+
+then spawn enemies in those locations!
+        
+Now dont spawn enemy when player can see spawn loc. Also dont spawn enemy when in safe zone. Also enemy is fazing through wall.
+
+Safe zone: make rect in safe zone !done!
+
+Dont spawn enemy when player can see. !done!
+
+Fast enemies less health, slow enemies more health, normal
+
+Fast: 2 hp,
+
+Makes more sense to just pass in the different args
+
+    in the main, get random type of enemy.
+
+
+Better enemy spawning/pathfinding:
+        If enemy stops moving at any point, kill them
+        if old pos == new pos: self.destroy
+
+
+Reload system to prevent holding down left click: 
+After 8 bullets must reload. Can reload whenever. !DONE!
+While reloading, if you reload again, it wont affect first reload progress. !DOne!
+Pause for 2 sec. Reload stat included both between bullets and gun reloads. !DONE!
+
+Reload bar above player when reloading:
+        show how many bullets are in gun !DONE!
+        slowly move bar to full when reloading !Done!
+        make it accuracte with the time. 
+            we need to determind how long it takes each bullet to reload.
+            what if we get the len of reload rect and divide it by the amount of bullets per reload?
+                !We did it! IT WOKRS! PRAISE JESUS
+
+
+
+        increase the amount of bullets per reload !Done!
+        
+
+
+Coin system:
+make enemies give you money
+make shop cost money
+
+
+
+Line of sight/darkness/shader:
+
+Boss:
+            Spawn missles that home toward player. no wall collision. also spawns random tpyes of enemies.
+            enemies out side do not spawn.
+            boss follows player at slow speed.
+            ?camera?
+
