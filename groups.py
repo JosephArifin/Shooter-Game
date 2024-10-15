@@ -17,8 +17,6 @@ class AllSprites(pygame.sprite.LayeredUpdates):
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_pos -= self.offset
 
-# class MissileSprites(pygame.sprite.)
-
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, surf, groups):
         super().__init__(groups)

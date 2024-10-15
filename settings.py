@@ -6,13 +6,14 @@ FRAMERATE = 60
 TILE_SIZE = 96
 ANGLES = 360
 MENU_BG_COLOR = "white"
-
+HEALTH_BAR_COLOR = "#ed252a"
+LIGHT_BLACK = "#1c1c1c"
 
 
 # Precompute missile rotations
 def precompute_missile_rotations():
     original_image = pygame.Surface((25, 25), pygame.SRCALPHA)
-    pygame.draw.polygon(original_image, 'pink', [(0, 0), (22, 12.5), (0, 25)])
+    pygame.draw.polygon(original_image, '#edb3bf', [(0, 0), (22, 12.5), (0, 25)])
     rotations = {}
     for angle in range(ANGLES):
         rotated_image = pygame.transform.rotate(original_image, angle)
@@ -35,9 +36,9 @@ player_stats = {
 }
 
 enemy_type = {
-    'Fast':   {'spd': 280, 'radius': 15, 'mask_time': 150, 'max_hp': 1, 'color': 'green'},
-    'Normal': {'spd': 200, 'radius': 35, 'mask_time': 200, 'max_hp': 4, 'color': 'yellow'},
-    'Tank':   {'spd': 100, 'radius': 60, 'mask_time': 250, 'max_hp': 16, 'color': 'orange'},
+    'Fast':   {'spd': 280, 'radius': 15, 'mask_time': 150, 'max_hp': 1, 'color': '#b1c983'},
+    'Normal': {'spd': 200, 'radius': 35, 'mask_time': 200, 'max_hp': 4, 'color': '#f3c567'},
+    'Tank':   {'spd': 100, 'radius': 60, 'mask_time': 250, 'max_hp': 16, 'color': '#dd984b'},
 }
 
 boss_stats = {
@@ -45,6 +46,6 @@ boss_stats = {
     'radius' : 100,
     'mask time' : 500,
     'max HP' : 500,
-    'color' : 'purple',
+    'color' : '#6a5b86',
 }
     

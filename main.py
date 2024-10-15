@@ -27,7 +27,6 @@ class Game:
         self.bullet_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
         self.shop_sprites = pygame.sprite.Group()
-        self.missile_sprites = pygame.sprite.Group()
         
         # gun timer
         self.shoot = True
@@ -126,10 +125,13 @@ class Game:
                     if bullet.penetration > 0:
                         for sprite in collision_sprites:
                             sprite.decrease_health(self.bullet_dmg)
-                        if sprite == self.enemy:    # if normal enemy
+                        normal_enemy_type = sprite.enemy_type[0] == 'Fast' or sprite.enemy_type[0] == 'Normal' or sprite.enemy_type[0] == 'Tank'
+                        if normal_enemy_type:
+                            print('test')    # if normal enemy
                             bullet.penetration -= 1
-                            bullet.rect.center += bullet.direction * 100
-                        else:    # else boss, boss projectile,aaa missile enemy
+                            bullet.rect.center += bullet.direction * 80
+                        else:
+                            print('bullet')    # else boss, boss projectile,aaa missile enemy
                             bullet.kill()
                     elif bullet.penetration < 1:
                         for sprite in collision_sprites:
@@ -142,9 +144,8 @@ class Game:
     def player_collisions(self):
         collision_sprites = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False, pygame.sprite.collide_mask)
         if collision_sprites:
-            
-        
-            
+            self.all_sprites.remove(self.enemy_sprites)
+            self.enemy_sprites.empty()
             self.player.rect.center = pygame.Vector2(self.map.get_object_by_name('Player').x, self.map.get_object_by_name('Player').y)
 
     def input(self):
@@ -337,7 +338,7 @@ class Game:
         pos = (self.player.rect.centerx + x_offset, self.player.rect.centery - y_offset)    # gets the coord for missile
         
         # spawn missile
-        self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites, self.missile_sprites), pos, self.player)
+        self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites), pos, self.player)
 
     def check_reset_boss_fight(self):
         if self.is_player_fighting_boss and self.player.rect.bottom < 3072:
@@ -548,7 +549,7 @@ class Game:
             self.gun_timer()
             self.input()
             self.bullet_collisions()
-            self.player_collisions()
+            # self.player_collisions()
 
             # update boss fight
             self.boss_room_detection()

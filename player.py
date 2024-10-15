@@ -13,7 +13,7 @@ class Player(pygame.sprite.Sprite):
         self.coins = 0
 
         self.image = pygame.Surface((player_w, player_h), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, 'black', (player_w / 2, player_h / 2), self.radius)
+        pygame.draw.circle(self.image, '#3e4a56', (player_w / 2, player_h / 2), self.radius)  # body
 
         # rect
         self.rect = self.image.get_frect(center = pos)
@@ -59,7 +59,7 @@ class Gun(pygame.sprite.Sprite):
         # image, rect
         self.image = pygame.Surface((gun_w, gun_h), pygame.SRCALPHA)
         self.ogimage = self.image
-        pygame.draw.rect(self.image, 'red', pygame.FRect(0, 0, gun_w, gun_h))
+        pygame.draw.rect(self.image, 'gray', pygame.FRect(0, 0, gun_w, gun_h))
         self.rect = self.image.get_frect(topleft = self.player.rect.center + self.player_direction * self.distance)
 
     def follow_mouse(self):
@@ -113,7 +113,7 @@ class ReloadBar(pygame.sprite.Sprite):
         self.gun_reload_time = gun_reload_time
 
         self.image = pygame.Surface((90, 10))
-        self.image.fill('green')
+        self.image.fill('#86c280')
         self.rect = self.image.get_frect(center = self.player.rect.center - pygame.Vector2(0,50))
 
         # gun bar
@@ -124,7 +124,7 @@ class ReloadBar(pygame.sprite.Sprite):
 
     def update_bar(self):
         reload_rect = pygame.FRect(0, 0, self.image.width, 10)
-        pygame.draw.rect(self.image, 'dark green', reload_rect)
+        pygame.draw.rect(self.image, '#3c7136', reload_rect)
         
         if self.isReloading:
             self.reload_value += 18
@@ -134,7 +134,7 @@ class ReloadBar(pygame.sprite.Sprite):
             self.reload_value = self.bullets
             ratio = reload_rect.width / self.max_bullets
         progress_rect = pygame.FRect(reload_rect.topleft, (self.reload_value * ratio, reload_rect.height))
-        pygame.draw.rect(self.image, 'green', progress_rect)
+        pygame.draw.rect(self.image, '#86c280', progress_rect)
 
         if self.reload_value * ratio >= 90:
             self.bullets = self.bullets_per_reload

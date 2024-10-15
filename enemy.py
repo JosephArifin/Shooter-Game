@@ -19,7 +19,6 @@ class Enemy(pygame.sprite.Sprite):
         self.spawn_time = pygame.time.get_ticks()
         self.collision_sprites = collision_sprites
 
-
         # draw enemy
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
         pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius)
@@ -130,17 +129,13 @@ class EnemyHealthBar(pygame.sprite.Sprite):
     def update_health_bar(self):
         # update health bar
         health_rect = pygame.FRect(0, 0, self.image.width, 10)
-        pygame.draw.rect(self.image, 'black', health_rect)
+        pygame.draw.rect(self.image, LIGHT_BLACK, health_rect)
         self.draw_bar(health_rect, self.enemy.hitpoints, self.enemy.max_health)
-        
-        # if enemy is dead
-        if self.enemy.hitpoints <= 0:
-            self.kill()
         
     def draw_bar(self, rect, value, max_value):
         ratio = rect.width / max_value
         progress_rect = pygame.FRect(rect.topleft, (value * ratio, rect.height))
-        pygame.draw.rect(self.image, 'red', progress_rect)    
+        pygame.draw.rect(self.image, HEALTH_BAR_COLOR, progress_rect)    
 
     def move(self):
         self.rect.centerx = self.enemy.rect.centerx
@@ -149,6 +144,8 @@ class EnemyHealthBar(pygame.sprite.Sprite):
     def update(self, _):
         self.move()
         self.update_health_bar()
+        if not self.enemy.alive():
+            self.kill()
 
 class Boss(pygame.sprite.Sprite):
     def __init__(self, groups, pos, player, collision_sprites):
@@ -164,6 +161,7 @@ class Boss(pygame.sprite.Sprite):
         self.start_death = 0
         self.doRecoil = False
         self.recoil_iteration = 0
+        self.enemy_type = 'boss'
 
         # health
         self.max_health = boss_stats['max HP']
@@ -198,7 +196,7 @@ class Boss(pygame.sprite.Sprite):
             self.start_death = pygame.time.get_ticks()
             # change the image
             image = pygame.mask.from_surface(self.image).to_surface()
-            image.set_colorkey('black')
+            image.set_colorkey(LIGHT_BLACK)
             self.image = image
 
     def collisions(self, direction):
@@ -275,9 +273,10 @@ class BossProjectile(pygame.sprite.Sprite):
         self.direction = boss_cannon.direction
         self.collision_sprites = collision_sprites
         self.spd = 300
+        self.enemy_type = 'Proj'
 
         self.image = pygame.Surface((180,180), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, 'purple', (180 / 2, 180 / 2), 180 / 2)
+        pygame.draw.circle(self.image, boss_stats['color'], (180 / 2, 180 / 2), 180 / 2)
         self.rect = self.image.get_frect(center = self.boss_cannon.rect.center)
         self.mask = pygame.mask.from_surface(self.image)
 
@@ -299,11 +298,11 @@ class BossMissiles(pygame.sprite.Sprite):
         self.spd = 150
         self.direction = pygame.Vector2()
         self.angle = 0
-        self.doKill = False
+        self.enemy_type = 'missile'
 
         self.og_image = pygame.Surface((25,25), pygame.SRCALPHA)
         self.image = pygame.Surface((25,25), pygame.SRCALPHA)
-        pygame.draw.polygon(self.image, 'pink', [(0,0),(25,12.5),(0,25)])
+        pygame.draw.polygon(self.image, '#edb3bf', [(0,0),(25,12.5),(0,25)])
         self.rect = self.image.get_frect(center = pos)
         self.mask = pygame.mask.from_surface(self.image)
 
@@ -331,9 +330,6 @@ class BossMissiles(pygame.sprite.Sprite):
     def update(self, dt):
         self.move(dt)
         self.rotate()
-        if self.doKill:
-            # print('test')
-            self.kill()
 
 class BossHealthBar(pygame.sprite.Sprite):
     def __init__(self, groups, player, boss):
@@ -343,13 +339,13 @@ class BossHealthBar(pygame.sprite.Sprite):
         self.pos = self.player.rect.center + pygame.Vector2(0, -(WINDOW_HEIGHT / 2) + 50)
 
         self.image = pygame.Surface((960, 25), pygame.SRCALPHA)
-        pygame.draw.rect(self.image, 'red', pygame.FRect(0,0, self.image.width, self.image.height))
+        pygame.draw.rect(self.image, HEALTH_BAR_COLOR, pygame.FRect(0,0, self.image.width, self.image.height))
         self.rect = self.image.get_frect(center = self.pos)
 
     def update_health_bar(self):
         # update health bar
         health_rect = pygame.FRect(0, 0, self.image.width, self.image.height)
-        pygame.draw.rect(self.image, 'black', health_rect)
+        pygame.draw.rect(self.image, LIGHT_BLACK, health_rect)
         self.draw_bar(health_rect, self.boss.hitpoints, self.boss.max_health)
 
         # if enemy is dead
@@ -359,7 +355,7 @@ class BossHealthBar(pygame.sprite.Sprite):
     def draw_bar(self, rect, value, max_value):
         ratio = rect.width / max_value
         progress_rect = pygame.FRect(rect.topleft, (value * ratio, rect.height))
-        pygame.draw.rect(self.image, 'red', progress_rect)
+        pygame.draw.rect(self.image, HEALTH_BAR_COLOR, progress_rect)
 
     def update(self, _):
         self.rect.center = self.player.rect.center + pygame.Vector2(0, -(WINDOW_HEIGHT / 2) + 50)
@@ -369,7 +365,7 @@ class BossText(pygame.sprite.Sprite):
     def __init__(self, groups, font, health_bar):
         super().__init__(groups)
         self.health_bar = health_bar
-        self.image = font.render('Boss Health', False, 'black')
+        self.image = font.render('Boss Health', False, LIGHT_BLACK)
         self.rect = self.image.get_frect(center = (health_bar.rect.centerx, health_bar.rect.centery - 25))
 
     def update(self, _):
