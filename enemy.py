@@ -1,9 +1,11 @@
 from settings import *
 from random import choice
-from math import degrees, atan2, sqrt
+from math import degrees, atan2
+from fieldOfView import cast_rays
+from map import load_map_tmx
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, groups, pos, player, collision_sprites, enemies):
+    def __init__(self, groups, pos, player, player_vision_polygon, collision_sprites, enemies, camera_offset):
         super().__init__(groups)
         # get enemy stats
         self.enemy_type = choice(list(enemy_type.items()))    # get enemy type
@@ -18,6 +20,9 @@ class Enemy(pygame.sprite.Sprite):
         self.start_death = 0
         self.spawn_time = pygame.time.get_ticks()
         self.collision_sprites = collision_sprites
+        self.player_vision_polygon = player_vision_polygon
+        self.camera_offset = camera_offset
+        self.is_visible_to_player = False
 
         # draw enemy
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
@@ -33,6 +38,46 @@ class Enemy(pygame.sprite.Sprite):
         self.max_health = self.stats['max_hp']
         self.hitpoints = self.max_health
         
+    def is_enemy_corner_in_vision(self):
+        enemy_corners = [
+            self.rect.topleft,
+            self.rect.topright,
+            self.rect.bottomleft,
+            self.rect.bottomright
+        ]
+
+        for corner in enemy_corners:
+            if self.player_ray_collides_wall(corner):
+                pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius) # Corner is visible
+                self.is_visible_to_player = True
+            else:
+                self.image.fill((0,0,0,0))  # Corner is not visible
+                self.is_visible_to_player = False
+
+    def player_ray_collides_wall(self, corner_pos):
+        # Get direction from corner to player center
+        player_pos = pygame.Vector2(self.player.rect.center)
+        corner_pos = pygame.Vector2(corner_pos)
+        direction = pygame.Vector2(corner_pos - player_pos).normalize()
+
+        ray_x, ray_y = self.player.rect.center
+
+        while True:
+            ray_x += direction.x
+            ray_y += direction.y
+
+            # Calculate tile position on the map grid
+            map_x = int(ray_y // TILE_SIZE)
+            map_y = int(ray_x // TILE_SIZE)
+
+            # Check if ray hits a wall
+            if tile_grid[map_x][map_y] == 1:
+                return False  # Ray hits a wall, enemy is not visible
+
+            # Check if ray has reached the enemy
+            if pygame.Vector2(ray_x, ray_y).distance_to(corner_pos) < 1.0:
+                return True  # Ray reached the enemy
+
     def collisions(self, direction):
         for sprite in self.collision_sprites:
             if sprite.rect.colliderect(self.rect):
@@ -92,21 +137,24 @@ class Enemy(pygame.sprite.Sprite):
         self.kill()
 
     def move(self, dt):
-        # calculate enemy direction
-        player_pos = pygame.Vector2(self.player.rect.center)
-        enemy_pos = pygame.Vector2(self.rect.center)
-        self.direction = (player_pos - enemy_pos).normalize()
+        if self.player.is_player_in_safezone:
+            self.direction = pygame.Vector2()
+        else:
+            # calculate enemy direction
+            player_pos = pygame.Vector2(self.player.rect.center)
+            enemy_pos = pygame.Vector2(self.rect.center)
+            self.direction = (player_pos - enemy_pos).normalize()
 
-        # move enemy and get old and new pos for inside corner collision
-        self.rect.centerx += self.direction.x * self.spd * dt
-        self.old_posx = self.rect.centerx # for inside corner collision
-        self.collisions('horizontal')
-        self.new_posx = self.rect.centerx # for inside corner collision
+            # move enemy and get old and new pos for inside corner collision
+            self.rect.centerx += self.direction.x * self.spd * dt
+            self.old_posx = self.rect.centerx # for inside corner collision, do we need this? ¯\_(ツ)_/¯
+            self.collisions('horizontal')
+            self.new_posx = self.rect.centerx # for inside corner collision
 
-        self.rect.centery += self.direction.y * self.spd * dt
-        self.old_posy = self.rect.centery # for inside corner collision
-        self.collisions('vertical')
-        self.new_posy = self.rect.centery # for inside corner collision
+            self.rect.centery += self.direction.y * self.spd * dt
+            self.old_posy = self.rect.centery # for inside corner collision
+            self.collisions('vertical')
+            self.new_posy = self.rect.centery # for inside corner collision
 
     def update(self, dt):
         self.too_far() # checks if enemy is too far from player
@@ -114,6 +162,7 @@ class Enemy(pygame.sprite.Sprite):
             self.move(dt) # moves enemy
             self.inside_corner_collision() # checks if enemy is in an inside corner
             self.avoid_other_enemies()
+            self.is_enemy_corner_in_vision()
         else:
             self.death_timer()
 
@@ -123,19 +172,22 @@ class EnemyHealthBar(pygame.sprite.Sprite):
         self.enemy = enemy
         self.pos = pos
 
-        self.image = pygame.Surface((50, 10))
+        self.image = pygame.Surface((50, 10), pygame.SRCALPHA)
         self.rect = self.image.get_frect(center = self.pos)
 
     def update_health_bar(self):
         # update health bar
-        health_rect = pygame.FRect(0, 0, self.image.width, 10)
-        pygame.draw.rect(self.image, LIGHT_BLACK, health_rect)
-        self.draw_bar(health_rect, self.enemy.hitpoints, self.enemy.max_health)
-        
+        if self.enemy.is_visible_to_player:
+            health_rect = pygame.FRect(0, 0, self.image.width, 10)
+            pygame.draw.rect(self.image, LIGHT_BLACK, health_rect)
+            self.draw_bar(health_rect, self.enemy.hitpoints, self.enemy.max_health)
+        else:
+            self.image.fill((0,0,0,0))
+           
     def draw_bar(self, rect, value, max_value):
         ratio = rect.width / max_value
         progress_rect = pygame.FRect(rect.topleft, (value * ratio, rect.height))
-        pygame.draw.rect(self.image, HEALTH_BAR_COLOR, progress_rect)    
+        pygame.draw.rect(self.image, HEALTH_BAR_COLOR, progress_rect)
 
     def move(self):
         self.rect.centerx = self.enemy.rect.centerx
@@ -196,7 +248,7 @@ class Boss(pygame.sprite.Sprite):
             self.start_death = pygame.time.get_ticks()
             # change the image
             image = pygame.mask.from_surface(self.image).to_surface()
-            image.set_colorkey(LIGHT_BLACK)
+            image.set_colorkey("black")
             self.image = image
 
     def collisions(self, direction):
@@ -357,8 +409,8 @@ class BossHealthBar(pygame.sprite.Sprite):
         progress_rect = pygame.FRect(rect.topleft, (value * ratio, rect.height))
         pygame.draw.rect(self.image, HEALTH_BAR_COLOR, progress_rect)
 
-    def update(self, _):
-        self.rect.center = self.player.rect.center + pygame.Vector2(0, -(WINDOW_HEIGHT / 2) + 50)
+    def update(self):
+        # self.rect.center = self.player.rect.center + pygame.Vector2(0, -(WINDOW_HEIGHT / 2) + 50)
         self.update_health_bar()
 
 class BossText(pygame.sprite.Sprite):
@@ -368,8 +420,8 @@ class BossText(pygame.sprite.Sprite):
         self.image = font.render('Boss Health', False, LIGHT_BLACK)
         self.rect = self.image.get_frect(center = (health_bar.rect.centerx, health_bar.rect.centery - 25))
 
-    def update(self, _):
-        self.rect.center = (self.health_bar.rect.centerx, self.health_bar.rect.centery - 25)
+    def update(self):
+        # self.rect.center = (self.health_bar.rect.centerx, self.health_bar.rect.centery - 25)
         if self.health_bar.alive() == False:
             self.kill()
 

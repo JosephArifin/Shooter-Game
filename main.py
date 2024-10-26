@@ -4,7 +4,9 @@ from enemy import *
 from groups import *
 from shop import *
 from rects import *
-from random import choice, randint
+from map import load_map_tmx
+from fieldOfView import cast_rays, draw_visibility_polygon
+from random import randint
 from math import cos, sin, radians
 from pytmx.util_pygame import load_pygame
 import sys
@@ -27,7 +29,9 @@ class Game:
         self.bullet_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
         self.shop_sprites = pygame.sprite.Group()
-        
+        self.boss_health_sprites = pygame.sprite.Group()
+        self.missile_sprites = pygame.sprite.Group()
+
         # gun timer
         self.shoot = True
         self.shoot_time = pygame.time.get_ticks()
@@ -55,13 +59,14 @@ class Game:
         self.bullet_spd = 700
         self.bullet_penetration = 1
         self.bullet_reload_time = 300 # in milisecs
-        self.bullet_dmg = 50
-        self.gun_reload_time = 2000 # in milisecs
+        self.bullet_dmg = 1  # default is 1
+        self.gun_reload_time = 2000 # in milisecs default is 2000
         self.bullets_per_reload = 8
 
         # shop
         self.shop_state = False
         self.shopfont = pygame.font.Font(None, 20)
+        self.shop_price = 100
 
         self.bullet_dmg_statsbar_value = 0
         self.bullet_penetration_statsbar_value = 0
@@ -96,6 +101,7 @@ class Game:
     def setup(self):
         self.map = load_pygame(join('data', 'map.tmx'))
         shop_surf = pygame.image.load(join('data', 'shop.png')).convert_alpha()
+        self.tile_grid = load_map_tmx('data/map.tmx')
 
         for x, y, image in self.map.get_layer_by_name('Ground').tiles():
             Sprite((x * TILE_SIZE, y * TILE_SIZE), image, self.all_sprites)
@@ -127,11 +133,9 @@ class Game:
                             sprite.decrease_health(self.bullet_dmg)
                         normal_enemy_type = sprite.enemy_type[0] == 'Fast' or sprite.enemy_type[0] == 'Normal' or sprite.enemy_type[0] == 'Tank'
                         if normal_enemy_type:
-                            print('test')    # if normal enemy
                             bullet.penetration -= 1
                             bullet.rect.center += bullet.direction * 80
                         else:
-                            print('bullet')    # else boss, boss projectile,aaa missile enemy
                             bullet.kill()
                     elif bullet.penetration < 1:
                         for sprite in collision_sprites:
@@ -147,6 +151,12 @@ class Game:
             self.all_sprites.remove(self.enemy_sprites)
             self.enemy_sprites.empty()
             self.player.rect.center = pygame.Vector2(self.map.get_object_by_name('Player').x, self.map.get_object_by_name('Player').y)
+            self.all_sprites.remove(self.bullet_sprites)
+
+    def player_coins(self):
+        self.font = pygame.font.SysFont("arialblack", 40)
+        self.image = self.font.render("Coins: " + str(self.player.coins), False, "gold")
+        self.display_surf.blit(self.image, (WINDOW_WIDTH - 270, WINDOW_HEIGHT - 60))
 
     def input(self):
         mouse = pygame.mouse.get_pressed()
@@ -201,9 +211,9 @@ class Game:
                     if obj.name == 'Enemy':
                         if not self.player_vision_rect.rect.collidepoint(obj.x, obj.y):
                             if self.enemy_spawn_rect.rect.collidepoint(obj.x, obj.y):
-                                self.enemy = Enemy((self.all_sprites, self.enemy_sprites), (obj.x, obj.y), self.player, self.collision_sprites, self.enemy_sprites)
+                                self.enemy = Enemy((self.all_sprites, self.enemy_sprites), (obj.x, obj.y), self.player, self.player_vision_polygon, self.collision_sprites, self.enemy_sprites, self.all_sprites.offset)
                                 self.enemy_health_bar = EnemyHealthBar((self.all_sprites), (self.enemy.rect.centerx, self.enemy.rect.top - 20), self.enemy)
-            
+        
     # shop funcs
     def shop_collision(self):
         if self.player.rect.colliderect(self.shop.rect) and self.shop_state == False:
@@ -214,39 +224,45 @@ class Game:
     def shop_ui(self):
         if self.shop_state:
             mouse_pos = self.all_sprites.mouse_pos
+            check_click_state = pygame.mouse.get_just_released()[0]
+            check_player_coins = self.player.coins >= self.shop_price
             if self.bullet_dmg_button.rect.collidepoint(mouse_pos):
-                if pygame.mouse.get_just_released()[0]:
+                if check_click_state and check_player_coins:
                     if self.bullet_dmg <= 3:
                         self.bullet_dmg += 0.5
                         self.bullet_dmg_statsbar_value += 1
+                        self.player.coins -= 100
                     self.bullet_dmg_statsbar.update_stat_bar(self.bullet_dmg_statsbar_value)
 
             if self.bullet_penetration_button.rect.collidepoint(mouse_pos):
-                if pygame.mouse.get_just_released()[0]:
+                if check_click_state and check_player_coins:
                     if self.bullet_penetration <= 5:
                         self.bullet_penetration += 1
                         self.bullet_penetration_statsbar_value += 1
+                        self.player.coins -= 100
                     self.bullet_penetration_statsbar.update_stat_bar(self.bullet_penetration_statsbar_value)
 
             if self.bullet_spd_button.rect.collidepoint(mouse_pos):
-                if pygame.mouse.get_just_released()[0]:
+                if check_click_state and check_player_coins:
                     if self.bullet_spd <= 1100:
                         self.bullet_spd += 100
                         self.bullet_spd_statsbar_value += 1
+                        self.player.coins -= 100
                     self.bullet_spd_statsbar.update_stat_bar(self.bullet_spd_statsbar_value)
 
             if self.bullet_reload_time_button.rect.collidepoint(mouse_pos):
-                if pygame.mouse.get_just_released()[0]:
+                if check_click_state and check_player_coins:
                     if self.bullet_reload_time >= 150:
                         self.bullet_reload_time -= 35
                         self.bullet_reload_statsbar_value += 1
+                        self.player.coins -= 100
                     if self.gun_reload_time > 800:
                         self.gun_reload_time -= 240
                         self.reload_bar.gun_reload_time = self.gun_reload_time
-                       
                     if self.bullets_per_reload < 18:
                         self.bullets_per_reload += 2
                         self.reload_bar.bullets_per_reload += 2
+                        
                     self.bullet_reload_time_statsbar.update_stat_bar(self.bullet_reload_statsbar_value)
             
     def open_shop(self):
@@ -270,6 +286,12 @@ class Game:
         self.bullet_penetration_text = ShopText((self.all_sprites), self.bullet_penetration_button.rect.center + pygame.Vector2(0,-30), self.shopfont, "Penetration")
         self.bullet_spd_text = ShopText((self.all_sprites), self.bullet_spd_button.rect.center + pygame.Vector2(0,-30), self.shopfont, "Speed")
         self.bullet_reload_time_text = ShopText((self.all_sprites), self.bullet_reload_time_button.rect.center + pygame.Vector2(0,-30), self.shopfont, "Reload")
+
+        # price text
+        self.bullet_dmg_price = ShopText((self.all_sprites), self.bullet_dmg_button.rect.center, self.shopfont, "100")
+        self.bullet_penetration_price = ShopText((self.all_sprites), self.bullet_penetration_button.rect.center, self.shopfont, "100")
+        self.bullet_spd_price = ShopText((self.all_sprites), self.bullet_spd_button.rect.center, self.shopfont, "100")
+        self.bullet_reload_time_price = ShopText((self.all_sprites), self.bullet_reload_time_button.rect.center, self.shopfont, "100")
         
         # update stat bars
         self.bullet_dmg_statsbar.update_stat_bar(self.bullet_dmg_statsbar_value)
@@ -296,6 +318,11 @@ class Game:
         self.bullet_penetration_text.kill()
         self.bullet_spd_text.kill()
         self.bullet_reload_time_text.kill()
+        self.bullet_dmg_price.kill()
+        self.bullet_penetration_price.kill()
+        self.bullet_spd_price.kill()
+        self.bullet_reload_time_price.kill()
+
 
     # boss fight funcs
     def boss_room_detection(self):
@@ -311,14 +338,14 @@ class Game:
                 for i in range(randint(5,7)):
                        posx = randint(2 * TILE_SIZE, 14 * TILE_SIZE)
                        posy = randint(44 * TILE_SIZE, 50 * TILE_SIZE)
-                       self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites), (posx, posy), self.player)
+                       self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites, self.missile_sprites), (posx, posy), self.player)
 
     def spawn_boss(self):
         x, y = self.map.get_object_by_name('Boss').x, self.map.get_object_by_name('Boss').y    # get boss position
         self.boss = Boss((self.all_sprites, self.enemy_sprites), (x, y), self.player, self.collision_sprites)    # spawn boss
         self.boss_cannon = BossCannon(self.all_sprites, self.boss, self.player)
-        self.boss_health_bar = BossHealthBar(self.all_sprites, self.player, self.boss)    # boss health bar
-        self.boss_text = BossText(self.all_sprites, self.boss_font, self.boss_health_bar)    # text
+        self.boss_health_bar = BossHealthBar(self.boss_health_sprites, self.player, self.boss)    # boss health bar
+        self.boss_text = BossText(self.boss_health_sprites, self.boss_font, self.boss_health_bar)    # text
 
     def boss_do_shoot(self):
         # spawn proj, reorder, and doRecoil
@@ -338,7 +365,7 @@ class Game:
         pos = (self.player.rect.centerx + x_offset, self.player.rect.centery - y_offset)    # gets the coord for missile
         
         # spawn missile
-        self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites), pos, self.player)
+        self.boss_missile = BossMissiles((self.all_sprites, self.enemy_sprites,self.missile_sprites), pos, self.player)
 
     def check_reset_boss_fight(self):
         if self.is_player_fighting_boss and self.player.rect.bottom < 3072:
@@ -350,16 +377,15 @@ class Game:
             self.has_boss_spawned = False
 
     def spawn_bossfight_enemies(self):
-
         # get random pos inside bossfight
         x, y = randint(2* TILE_SIZE, 14 * TILE_SIZE), randint(34 * TILE_SIZE, 46 * TILE_SIZE)
 
         # check if pos is not inside player vision
         if not self.player_vision_rect.rect.collidepoint(x,y):
-            self.enemy = Enemy((self.all_sprites, self.enemy_sprites), (x, y), self.player, self.collision_sprites, self.enemy_sprites)
-            self.enemy.spd *= .6
+            self.enemy = Enemy((self.all_sprites, self.enemy_sprites), (x, y), self.player, self.player_vision_polygon, self.collision_sprites, self.enemy_sprites, self.all_sprites.offset)
+            self.enemy.spd = (self.enemy.spd * .6) + 18
             self.enemy_health_bar = EnemyHealthBar(self.all_sprites, (self.enemy.rect.centerx, self.enemy.rect.top - 20), self.enemy)
-        else:
+        else:  # If pos is inside player vision, reget random pos
             self.spawn_bossfight_enemies()
 
     def check_boss_health(self):
@@ -380,11 +406,19 @@ class Game:
                 self.game_running = False
                 self.bossfight_end()
                 
-    def boss_health_bar_on_top(self):
+    def check_is_player_in_safezone(self):
+        self.player.is_player_in_safezone = True if self.player.rect.colliderect(self.safezone.rect) else False
+
+    def reorder_boss_sprites(self):
         if self.is_player_fighting_boss:
             self.all_sprites.move_to_front(self.boss)
-            self.all_sprites.move_to_front(self.boss_health_bar)
-            self.all_sprites.move_to_front(self.boss_text)
+            for sprite in self.missile_sprites:
+                self.all_sprites.move_to_front(sprite)
+
+            # Boss health bar
+            self.boss_health_sprites.update()
+            self.display_surf.blit(self.boss_health_bar.image, (WINDOW_WIDTH / 2 - self.boss_health_bar.image.width / 2, 40))
+            self.display_surf.blit(self.boss_text.image, (WINDOW_WIDTH / 2 - self.boss_text.image.width / 2, 15))
 
     # menus / screens
     def bossfight_end(self):
@@ -453,7 +487,7 @@ class Game:
         menu_state = "main"
 
         #define fonts
-        font = pygame.font.SysFont("arialblack", 40)
+        font = pygame.font.SysFont("arialblack", 35)
     
         # create button instances
         play_button = NavButton(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 - 200, pygame.image.load('data/buttons/play_button.png'), 1.5)
@@ -463,7 +497,7 @@ class Game:
 
         # drawing text func
         def draw_text(text, font, text_col, x, y):
-            img = font.render(text, True, text_col)
+            img = font.render(text, False, text_col)
             screen.blit(img, (x, y))
 
         # transition to game
@@ -507,7 +541,7 @@ class Game:
             # check if the options menu is open
             if menu_state == "options":
                 # draw the back button
-                draw_text('SPACE to pause\nWASD to move\nLEFT CLICK to shoot\nRIGHT CLICK to reload', font, "black", 380, 200)
+                draw_text('SPACE to pause\nWASD to move\nLEFT CLICK to shoot\nUNLESS in safe zone\nRIGHT CLICK to reload', font, "black", 380, 200)
                 if back_button.draw(screen):
                     menu_state = "main"
 
@@ -549,18 +583,24 @@ class Game:
             self.gun_timer()
             self.input()
             self.bullet_collisions()
-            # self.player_collisions()
-
+            
+            self.check_is_player_in_safezone()
+            self.player_collisions()
+            
             # update boss fight
             self.boss_room_detection()
             self.check_reset_boss_fight()
             self.check_boss_health()
-            self.boss_health_bar_on_top()
             
             # draw
             self.display_surf.fill('black')
             self.all_sprites.draw(self.player.rect.center)
             
+            # Call the raycasting function, passing the player's position and camera offset
+            self.player_vision_polygon = draw_visibility_polygon(self.display_surf, cast_rays(self.player.rect.center, self.all_sprites.offset, self.tile_grid))
+            self.player_coins()
+            self.reorder_boss_sprites()
+
             # update display
             pygame.display.update()
 

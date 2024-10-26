@@ -8,9 +8,10 @@ class Player(pygame.sprite.Sprite):
         self.radius = player_stats['player_radius']
         player_w = player_stats['player_w']
         player_h = player_stats['player_h']
+        self.is_player_in_safezone = True
 
         self.collision_sprites = collision_sprites
-        self.coins = 0
+        self.coins = 1000
 
         self.image = pygame.Surface((player_w, player_h), pygame.SRCALPHA)
         pygame.draw.circle(self.image, '#3e4a56', (player_w / 2, player_h / 2), self.radius)  # body
@@ -40,9 +41,9 @@ class Player(pygame.sprite.Sprite):
 
     def move(self, dt):
         self.rect.centerx += self.direction.x * self.spd * dt
-        # self.collisions('horizontal')
+        self.collisions('horizontal')
         self.rect.centery += self.direction.y * self.spd * dt
-        # self.collisions('vertical')
+        self.collisions('vertical')
 
     def update(self, dt):
         self.input()
@@ -122,12 +123,12 @@ class ReloadBar(pygame.sprite.Sprite):
         self.isReloading = False
         self.reload_value = 0
 
-    def update_bar(self):
+    def update_bar(self, dt):
         reload_rect = pygame.FRect(0, 0, self.image.width, 10)
         pygame.draw.rect(self.image, '#3c7136', reload_rect)
         
         if self.isReloading:
-            self.reload_value += 18
+            self.reload_value += 1100 * dt
             ratio = self.image.width / self.gun_reload_time
         else:
             self.max_bullets = self.bullets_per_reload
@@ -139,16 +140,16 @@ class ReloadBar(pygame.sprite.Sprite):
         if self.reload_value * ratio >= 90:
             self.bullets = self.bullets_per_reload
 
-    def reloading(self):
+    def reloading(self, dt):
         if self.bullets < self.bullets_per_reload:
-            self.update_bar()
+            self.update_bar(dt)
         elif self.bullets >= self.bullets_per_reload:
             self.isReloading = False
 
-    def update(self, _):
+    def update(self, dt):
         self.rect.center = self.player.rect.center - pygame.Vector2(0,50)
         if self.isReloading:
-            self.reloading()
+            self.reloading(dt)
         else:
-            self.update_bar()
+            self.update_bar(dt)
         

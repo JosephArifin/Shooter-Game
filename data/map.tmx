@@ -107,13 +107,13 @@
 </data>
  </layer>
  <objectgroup id="3" name="Entities">
-  <object id="1" name="Shop" x="1632" y="2976">
+  <object id="1" name="Shop" x="4128" y="384">
    <point/>
   </object>
   <object id="2" name="Safe_zone" x="3552" y="96">
    <point/>
   </object>
-  <object id="3" name="Player" x="1440" y="2976">
+  <object id="3" name="Player" x="4032" y="576">
    <point/>
   </object>
   <object id="5" name="Boss_rect" x="1248" y="3072">

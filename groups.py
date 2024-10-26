@@ -1,6 +1,6 @@
 from settings import *
 
-class AllSprites(pygame.sprite.LayeredUpdates):  
+class AllSprites(pygame.sprite.LayeredUpdates):
     def __init__(self):
         super().__init__()
         self.display_surface = pygame.display.get_surface()
@@ -16,6 +16,7 @@ class AllSprites(pygame.sprite.LayeredUpdates):
     def offset_mouse_pos(self):
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_pos -= self.offset
+        return self.mouse_pos
 
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, surf, groups):

@@ -1,3 +1,4 @@
+import pygame.freetype
 from settings import *
 
 class EnemySpawnRect(pygame.sprite.Sprite):
@@ -31,7 +32,6 @@ class PlayerVisionRect(pygame.sprite.Sprite):
         super().__init__(groups)
         self.player = player
         self.image = pygame.Surface((1300, 770), pygame.SRCALPHA)
-        self.image.fill((0,0,0,0))
         self.rect = self.image.get_frect(center = player.rect.center)
 
     def update(self, dt):

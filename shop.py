@@ -17,6 +17,7 @@ class ShopUI(pygame.sprite.Sprite):
 class ShopText(pygame.sprite.Sprite):
     def __init__(self, groups, pos, font, text):
         super().__init__(groups)
+        font = pygame.font.SysFont("arialblack", 15)
         self.image = font.render(text, False, LIGHT_BLACK)
         self.rect = self.image.get_frect(center = pos)
 
